@@ -21,10 +21,28 @@ log = { version = "0.4.17", default-features = false }
 scale-info = { version = "2.1.2", default-features = false, features = ["derive"] }
 serde = { version = "1.0.139", optional = true, features = ["derive"] }
 smallvec = "1.6.1"
-getrandom = {version = "0.2.7", default-features = false, features = ["custom"]}
 
 # Local
 pallet-template = { path = "../pallets/template", default-features = false }
+
+# Substrate FRAME
+frame-benchmarking =           { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25", optional = true }
+frame-executive =              { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25" }
+frame-support =                { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25" }
+frame-system =                 { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25" }
+frame-system-benchmarking =    { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25", optional = true }
+frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25" }
+frame-try-runtime =            { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25", optional = true }
+
+# Substrate Pallet
+pallet-aura =                                { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25" }
+pallet-authorship =                          { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25" }
+pallet-balances =                            { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25" }
+pallet-session =                             { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25" }
+pallet-sudo =                                { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25" }
+pallet-timestamp =                           { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25" }
+pallet-transaction-payment =                 { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25" }
+pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25" }
 
 # Substrate
 sp-api =              { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25" }
@@ -39,39 +57,6 @@ sp-session =          { git = "https://github.com/paritytech/substrate", default
 sp-std =              { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25" }
 sp-transaction-pool = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25" }
 sp-version =          { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25" }
-
-# Substrate FRAME
-frame-executive =              { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25" }
-frame-support =                { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25" }
-frame-system =                 { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25" }
-frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25" }
-frame-try-runtime =            { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25", optional = true }
-pallet-aura =                                { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25" }
-pallet-balances =                            { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25" }
-pallet-authorship =                          { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25" }
-pallet-session =                             { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25" }
-pallet-sudo =                                { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25" }
-pallet-timestamp =                           { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25" }
-pallet-transaction-payment =                 { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25" }
-pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25" }
-
-## Used for runtime benchmarking
-frame-benchmarking =           { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25", optional = true }
-frame-system-benchmarking =    { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.25", optional = true }
-
-# Frontier
-fp-rpc =                         { git = "https://github.com/PAIDNetwork/frontier", branch = "patch3-polkadot-v0.9.25" }
-fp-self-contained =              { git = "https://github.com/PAIDNetwork/frontier", branch = "patch3-polkadot-v0.9.25" }
-# Frontier FRAME
-pallet-base-fee =                { git = "https://github.com/PAIDNetwork/frontier", branch = "patch3-polkadot-v0.9.25"  }
-pallet-dynamic-fee =             { git = "https://github.com/PAIDNetwork/frontier", branch = "patch3-polkadot-v0.9.25"  }
-pallet-ethereum =                { git = "https://github.com/PAIDNetwork/frontier", branch = "patch3-polkadot-v0.9.25" }
-pallet-evm =                     { git = "https://github.com/PAIDNetwork/frontier", branch = "patch3-polkadot-v0.9.25" }
-pallet-evm-precompile-modexp =   { git = "https://github.com/PAIDNetwork/frontier", branch = "patch3-polkadot-v0.9.25" }
-pallet-evm-precompile-sha3fips = { git = "https://github.com/PAIDNetwork/frontier", branch = "patch3-polkadot-v0.9.25" }
-pallet-evm-precompile-simple =   { git = "https://github.com/PAIDNetwork/frontier", branch = "patch3-polkadot-v0.9.25" }
-pallet-hotfix-sufficients =      { git = "https://github.com/PAIDNetwork/frontier", branch = "patch3-polkadot-v0.9.25" }
-fp-evm =                         { git = "https://github.com/PAIDNetwork/frontier", branch = "patch3-polkadot-v0.9.25" }
 
 # Polkadot
 pallet-xcm =              { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.25" }
@@ -94,12 +79,27 @@ cumulus-primitives-utility =          { git = "https://github.com/paritytech/cum
 pallet-collator-selection =           { git = "https://github.com/paritytech/cumulus", default-features = false,  branch = "polkadot-v0.9.25" }
 parachain-info =                      { git = "https://github.com/paritytech/cumulus", default-features = false,  branch = "polkadot-v0.9.25" }
 
+# Frontier
+pallet-evm =                     { git = "https://github.com/PAIDNetwork/frontier", default-features = false, branch = "patch3-polkadot-v0.9.25" }
+pallet-evm-precompile-simple =   { git = "https://github.com/PAIDNetwork/frontier", default-features = false, branch = "patch3-polkadot-v0.9.25" }
+pallet-evm-precompile-sha3fips = { git = "https://github.com/PAIDNetwork/frontier", default-features = false, branch = "patch3-polkadot-v0.9.25" }
+pallet-evm-precompile-modexp =   { git = "https://github.com/PAIDNetwork/frontier", default-features = false, branch = "patch3-polkadot-v0.9.25" }
+pallet-ethereum =                { git = "https://github.com/PAIDNetwork/frontier", default-features = false, branch = "patch3-polkadot-v0.9.25" }
+fp-self-contained =              { git = "https://github.com/PAIDNetwork/frontier", default-features = false, branch = "patch3-polkadot-v0.9.25" }
+fp-rpc =                         { git = "https://github.com/PAIDNetwork/frontier", default-features = false, branch = "patch3-polkadot-v0.9.25" }
+fp-evm =                         { git = "https://github.com/PAIDNetwork/frontier", default-features = false, branch = "patch3-polkadot-v0.9.25" }
+pallet-base-fee =                { git = "https://github.com/PAIDNetwork/frontier", default-features = false, branch = "patch3-polkadot-v0.9.25"  }
+pallet-dynamic-fee =             { git = "https://github.com/PAIDNetwork/frontier", default-features = false, branch = "patch3-polkadot-v0.9.25"  }
+pallet-hotfix-sufficients =      { git = "https://github.com/PAIDNetwork/frontier", default-features = false, branch = "patch3-polkadot-v0.9.25" }
+
+
 [features]
-#default = ["std", "aura", "with-rocksdb-weights"]
-#aura = []
-#manual-seal = ["with-rocksdb-weights"]
-#with-rocksdb-weights = []
-#with-paritydb-weights = []
+#default = ["std",]
+default = ["std", "aura", "with-rocksdb-weights"]
+aura = []
+manual-seal = ["with-rocksdb-weights"]
+with-rocksdb-weights = []
+with-paritydb-weights = []
 std = [
 	"codec/std",
 	"log/std",
@@ -126,12 +126,21 @@ std = [
 	"pallet-session/std",
 	"pallet-sudo/std",
 	"pallet-template/std",
-	"pallet-evm/std",
-	"pallet-ethereum/std",
 	"pallet-timestamp/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
 	"pallet-xcm/std",
+
+	# Frontier FRAME
+	"pallet-base-fee/std",
+	"pallet-dynamic-fee/std",
+	"pallet-ethereum/std",
+	"pallet-evm/std",
+	"pallet-evm-precompile-modexp/std",
+	"pallet-evm-precompile-sha3fips/std",
+	"pallet-evm-precompile-simple/std",
+	"pallet-hotfix-sufficients/std",
+
 	"parachain-info/std",
 	"polkadot-parachain/std",
 	"polkadot-runtime-common/std",
@@ -153,8 +162,8 @@ std = [
 ]
 
 runtime-benchmarks = [
-	"frame-benchmarking",
 	"hex-literal",
+	"frame-benchmarking",
 	"frame-benchmarking/runtime-benchmarks",
 	"frame-support/runtime-benchmarks",
 	"frame-system-benchmarking",

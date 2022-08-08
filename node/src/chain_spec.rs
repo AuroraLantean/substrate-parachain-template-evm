@@ -1,10 +1,21 @@
-use cumulus_primitives_core::ParaId;
-use parachain_template_runtime::{AccountId, AuraId, Signature, EXISTENTIAL_DEPOSIT};
-use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
+use parachain_template_runtime::{AccountId, AuraId, EVMConfig, EthereumConfig, GenesisConfig, 
+	Signature, SessionConfig, EXISTENTIAL_DEPOSIT };
 use sc_service::ChainType;
+
+use sp_core::{sr25519, Pair, Public, H160, U256};
+
+use sp_runtime::{
+	traits::{IdentifyAccount, Verify},
+	AccountId32,
+};
+use std::str::FromStr;
+
+use cumulus_primitives_core::ParaId;
+use hex_literal::hex;
+
+use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
+
 use serde::{Deserialize, Serialize};
-use sp_core::{sr25519, Pair, Public};
-use sp_runtime::traits::{IdentifyAccount, Verify};
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
 pub type ChainSpec =
@@ -55,7 +66,6 @@ where
 }
 
 /// Generate the session keys from individual elements.
-///
 /// The input must be a tuple of individual keys (a single arg for now since we have just one key).
 pub fn template_session_keys(keys: AuraId) -> parachain_template_runtime::SessionKeys {
 	parachain_template_runtime::SessionKeys { aura: keys }
@@ -217,5 +227,25 @@ fn testnet_genesis(
 		polkadot_xcm: parachain_template_runtime::PolkadotXcmConfig {
 			safe_xcm_version: Some(SAFE_XCM_VERSION),
 		},
+		evm: EVMConfig {
+			accounts: {
+				// Prefund the "Gerald" account
+				let mut accounts = std::collections::BTreeMap::new();
+				const PREFUNDS_AMOUNT: &str = "0xffffffffffffffffffffffffffffffff"; // 3.4 * 10^39
+				accounts.insert(
+					H160::from_slice(&hex!("6Be02d1d3665660d22FF9624b7BE0551ee1Ac91b")),
+					fp_evm::GenesisAccount {
+						// Using a larger number, so I can tell the accounts apart by balance.
+						nonce: U256::zero(),
+						balance: U256::from_str(&PREFUNDS_AMOUNT)
+							.expect("Please provide a valid balance value"),
+						code: vec![],
+						storage: std::collections::BTreeMap::new(),
+					},
+				);
+				accounts
+			},
+		},
+		ethereum: EthereumConfig {},
 	}
 }

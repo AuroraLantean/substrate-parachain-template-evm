@@ -6523,7 +6523,6 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
- "getrandom 0.2.7",
  "hex-literal",
  "log",
  "pallet-aura",
