@@ -1,7 +1,7 @@
-use parachain_template_runtime::{AccountId, AuraId, EVMConfig, EthereumConfig, GenesisConfig, 
+use parachain_template_runtime::{AccountId, EVMConfig, EthereumConfig, GenesisConfig, 
 	Signature, SessionConfig, EXISTENTIAL_DEPOSIT };
 use sc_service::ChainType;
-
+use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{sr25519, Pair, Public, H160, U256};
 
 use sp_runtime::{

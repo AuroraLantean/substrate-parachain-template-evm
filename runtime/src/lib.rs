@@ -6,12 +6,18 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+use codec::{Decode, Encode};
+use pallet_evm::FeeCalculator;
+
 mod weights;
 pub mod xcm_config;
+mod precompiles;
+use precompiles::FrontierPrecompiles;
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
+use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{
 	crypto::{ByteArray, KeyTypeId},
 	OpaqueMetadata, H160, H256, U256,
@@ -20,16 +26,18 @@ use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{
 		AccountIdLookup, BlakeTwo256, Block as BlockT, DispatchInfoOf, Dispatchable,
-		IdentifyAccount, NumberFor, PostDispatchInfoOf, UniqueSaturatedInto, Verify,},
+		IdentifyAccount, NumberFor, PostDispatchInfoOf, UniqueSaturatedInto, Verify,
+	},
 	transaction_validity::{TransactionSource, TransactionValidity, TransactionValidityError},
 	ApplyExtrinsicResult, MultiSignature,
 };
-
-use sp_std::prelude::*;
+use sp_std::{marker::PhantomData, prelude::*};
+//use sp_std::prelude::*;
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
+use fp_rpc::TransactionStatus;
 use frame_support::{
 	construct_runtime, parameter_types,
 	traits::{ConstU32, ConstU8, FindAuthor, KeyOwnerProofSystem, Randomness, Everything},
@@ -37,7 +45,7 @@ use frame_support::{
 		constants::WEIGHT_PER_SECOND, ConstantMultiplier, DispatchClass, Weight,
 		WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial,
 	},
-	PalletId,
+	PalletId, ConsensusEngineId, StorageValue,
 };
 use frame_system::{
 	limits::{BlockLength, BlockWeights},
@@ -48,18 +56,15 @@ use pallet_evm::{
 	Account as EVMAccount, EnsureAddressRoot, EnsureAddressNever, EnsureAddressTruncated, 
 	GasWeightMapping, HashedAddressMapping, Runner, SubstrateBlockHashMapping,
 };
+//use pallet_base_fee::BaseFee;
 
-pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
+use pallet_transaction_payment::CurrencyAdapter;
 use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
-
 #[cfg(any(feature = "std", test))]
-pub use sp_runtime::BuildStorage;
 
-mod precompiles;
-use precompiles::FrontierPrecompiles;
 // Polkadot imports
-use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
+use polkadot_runtime_common::{SlowAdjustingFeeUpdate};//BlockHashCount
 
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 
@@ -69,6 +74,9 @@ use xcm_executor::XcmExecutor;
 
 /// Import the template pallet.
 pub use pallet_template;
+
+/// An index to a block.
+pub type BlockNumber = u32;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
@@ -85,9 +93,6 @@ pub type Index = u32;
 
 /// A hash of some data used by the chain.
 pub type Hash = sp_core::H256;
-
-/// An index to a block.
-pub type BlockNumber = u32;
 
 /// The address format for describing accounts.
 pub type Address = MultiAddress<AccountId, ()>;
@@ -149,9 +154,9 @@ impl WeightToFeePolynomial for WeightToFee {
 /// to even the core data structures.
 pub mod opaque {
 	use super::*;
-	use sp_runtime::{generic, traits::BlakeTwo256};
 
 	pub use sp_runtime::OpaqueExtrinsic as UncheckedExtrinsic;
+
 	/// Opaque block header type.
 	pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
 	/// Opaque block type.
@@ -172,7 +177,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	impl_name: create_runtime_str!("template-parachain"),
 	authoring_version: 1,
 	spec_version: 1,
-	impl_version: 0,
+	impl_version: 1,//0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
 	state_version: 1,
@@ -184,7 +189,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 /// up by `pallet_aura` to implement `fn slot_duration()`.
 ///
 /// Change this to adjust the block time.
-pub const MILLISECS_PER_BLOCK: u64 = 12000;
+pub const MILLISECS_PER_BLOCK: u64 = 6000;//12000;
 
 // NOTE: Currently it is not possible to change the slot duration after the chain has started.
 //       Attempting to do so will brick block production.
@@ -207,22 +212,24 @@ pub const EXISTENTIAL_DEPOSIT: Balance = MILLIUNIT;
 /// used to limit the maximal weight of a single extrinsic.
 const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(5);
 
-/// We allow `Normal` extrinsics to fill up the block up to 75%, the rest can be used by
-/// `Operational` extrinsics.
-const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
-
-/// We allow for 0.5 of a second of compute with a 12 second average block time.
-const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND / 2;
-
 /// The version information used to identify this runtime when compiled natively.
 #[cfg(feature = "std")]
 pub fn native_version() -> NativeVersion {
 	NativeVersion { runtime_version: VERSION, can_author_with: Default::default() }
 }
+
+/// We allow `Normal` extrinsics to fill up the block up to 75%, the rest can be used by
+/// `Operational` extrinsics.
+const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
+/// We allow for 2 seconds of compute with a 6 second average block time.
+pub const MAXIMUM_BLOCK_WEIGHT: Weight = 2 * WEIGHT_PER_SECOND;
+// We allow for 0.5 of a second of compute with a 12 second average block time.
+//const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND / 2;
 const WEIGHT_PER_GAS: u64 = 20_000;
+
 parameter_types! {
 	pub const Version: RuntimeVersion = VERSION;
-
+	pub const BlockHashCount: BlockNumber = 256;
 	// This part is copied from Substrate's `bin/node/runtime/src/lib.rs`.
 	//  The `RuntimeBlockLength` and `RuntimeBlockWeights` exist here because the
 	// `DeletionWeightLimit` and `DeletionQueueDepth` depend on those to parameterize
@@ -253,6 +260,13 @@ parameter_types! {
 // Configure FRAME pallets to include in runtime.
 
 impl frame_system::Config for Runtime {
+	/// The basic call filter to use in dispatchable.
+	type BaseCallFilter = Everything;
+	/// Block & extrinsics weights: base values and limits.
+	type BlockWeights = RuntimeBlockWeights;
+	/// The maximum length of a block (in bytes).
+	type BlockLength = RuntimeBlockLength;
+
 	/// The identifier used to distinguish between accounts.
 	type AccountId = AccountId;
 	/// The aggregated dispatch type that is available for extrinsics.
@@ -275,6 +289,9 @@ impl frame_system::Config for Runtime {
 	type Origin = Origin;
 	/// Maximum number of block number to block hash mappings to keep (oldest pruned first).
 	type BlockHashCount = BlockHashCount;
+	/// The weight of database operations that the runtime can invoke.
+	type DbWeight = RocksDbWeight;
+
 	/// Runtime version.
 	type Version = Version;
 	/// Converts a module to an index of this module in the runtime.
@@ -285,16 +302,9 @@ impl frame_system::Config for Runtime {
 	type OnNewAccount = ();
 	/// What to do if an account is fully reaped from the system.
 	type OnKilledAccount = ();
-	/// The weight of database operations that the runtime can invoke.
-	type DbWeight = RocksDbWeight;
-	/// The basic call filter to use in dispatchable.
-	type BaseCallFilter = Everything;
+
 	/// Weight information for the extrinsics of this pallet.
 	type SystemWeightInfo = ();
-	/// Block & extrinsics weights: base values and limits.
-	type BlockWeights = RuntimeBlockWeights;
-	/// The maximum length of a block (in bytes).
-	type BlockLength = RuntimeBlockLength;
 	/// This is used as an identifier of the chain. 42 is the generic substrate prefix.
 	type SS58Prefix = SS58Prefix;
 	/// The action to take on a Runtime Upgrade
@@ -355,7 +365,7 @@ impl pallet_transaction_payment::Config for Runtime {
 	type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
 	type WeightToFee = WeightToFee;
 	type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
-	type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
+	type FeeMultiplierUpdate = ();//SlowAdjustingFeeUpdate<Self>;
 	type OperationalFeeMultiplier = OperationalFeeMultiplier;
 }
 
@@ -383,9 +393,31 @@ impl GasWeightMapping for FixedGasWeightMapping {
 	}
 	fn weight_to_gas(weight: Weight) -> u64 {
 		weight.wrapping_div(WEIGHT_PER_GAS)
+	}//u64::try_from(weight.wrapping_div(WEIGHT_PER_GAS)).unwrap_or(u32::MAX as u64)
+}
+pub mod currency {
+  use crate::Balance;
+	//use crate::type_alias_and_consts::Balance;
+
+	// Provide a common factor between runtimes based on a supply of tokens.
+	pub const SUPPLY_FACTOR: Balance = 100;
+
+	pub const ATTOHERO: Balance = 1;
+	pub const FEMTOHERO: Balance = 1_000;
+	pub const PICOHERO: Balance = 1_000_000;
+	pub const NANOHERO: Balance = 1_000_000_000;
+	pub const MICROHERO: Balance = 1_000_000_000_000;
+	pub const MILLIHERO: Balance = 1_000_000_000_000_000;
+	pub const HERO: Balance = 1_000_000_000_000_000_000;
+	pub const KILOHERO: Balance = 1_000_000_000_000_000_000_000;
+
+	pub const TRANSACTION_BYTE_FEE: Balance = 10 * MICROHERO * SUPPLY_FACTOR;
+	pub const STORAGE_BYTE_FEE: Balance = 100 * MICROHERO * SUPPLY_FACTOR;
+
+	pub const fn deposit(items: u32, bytes: u32) -> Balance {
+		items as Balance * 100 * MILLIHERO * SUPPLY_FACTOR + (bytes as Balance) * STORAGE_BYTE_FEE
 	}
 }
-/*
 pub struct FixedGasPrice;
 impl FeeCalculator for FixedGasPrice {
 	fn min_gas_price() -> (U256, Weight) {
@@ -393,23 +425,40 @@ impl FeeCalculator for FixedGasPrice {
 			(1 * currency::NANOHERO * currency::SUPPLY_FACTOR).into(),
 			1, // this number is currently arbitrary, but non-zero, requires benchmarking
 		)
+	}/*  Moombeam: (
+			(1 * currency::GIGAWEI * currency::SUPPLY_FACTOR).into(),
+			0u64,
+		)*/
+}
+
+pub struct FindAuthorTruncated<F>(PhantomData<F>);
+impl<F: FindAuthor<u32>> FindAuthor<H160> for FindAuthorTruncated<F> {
+	fn find_author<'a, I>(digests: I) -> Option<H160>
+	where
+		I: 'a + IntoIterator<Item = (ConsensusEngineId, &'a [u8])>,
+	{
+		if let Some(author_index) = F::find_author(digests) {
+			let authority_id = Aura::authorities()[author_index as usize].clone();
+			return Some(H160::from_slice(&authority_id.to_raw_vec()[4..24]));
+		}
+		None
 	}
-}*/
+}
 
 parameter_types! {
 	pub const EthChainId: u64 = 1345;
-	pub BlockGasLimit: U256 = U256::from(NORMAL_DISPATCH_RATIO * MAXIMUM_BLOCK_WEIGHT / WEIGHT_PER_GAS);
-	//U256::from(u32::max_value());
+	pub BlockGasLimit: U256 = U256::from(NORMAL_DISPATCH_RATIO * MAXIMUM_BLOCK_WEIGHT / WEIGHT_PER_GAS);//Frontier
+	//U256::from(u32::max_value());//JoshOrndorff
 	pub PrecompilesValue: FrontierPrecompiles<Runtime> = FrontierPrecompiles::<_>::new();
 }
 
 impl pallet_evm::Config for Runtime {
-	type FeeCalculator = ();//FixedGasPrice;
-	type GasWeightMapping = ();//HeroGasWeightMapping;
-	type BlockHashMapping = pallet_ethereum::EthereumBlockHashMapping<Self>;
-	type CallOrigin = EnsureAddressTruncated;//EnsureAddressRoot<AccountId>;
-	type WithdrawOrigin = EnsureAddressTruncated;//EnsureAddressNever<AccountId>;
-	type AddressMapping = HashedAddressMapping<BlakeTwo256>;
+	type FeeCalculator = FixedGasPrice;//moombeam; ();//Orndorff.  //BaseFee;//Frontier();
+	type GasWeightMapping = FixedGasWeightMapping;//Frontier; HeroGasWeightMapping; ();//Orndorff
+	type BlockHashMapping = pallet_ethereum::EthereumBlockHashMapping<Self>;//F.;SubstrateBlockHashMapping<Self>;//Orndorff 
+	type CallOrigin = EnsureAddressTruncated;//F. EnsureAddressRoot<AccountId>;//Orndorff
+	type WithdrawOrigin = EnsureAddressTruncated;//F. EnsureAddressNever<AccountId>;//Orndorff
+	type AddressMapping = HashedAddressMapping<BlakeTwo256>;//O+F
 	type Currency = Balances;
 	type Event = Event;
 	type Runner = pallet_evm::runner::stack::Runner<Self>;
@@ -419,10 +468,10 @@ impl pallet_evm::Config for Runtime {
 
 	type BlockGasLimit = BlockGasLimit;
 	/// To handle fee deduction for EVM transactions.
-	type OnChargeTransaction = ();//pallet_evm::EVMCurrencyAdapter<Balances, ()>;
+	type OnChargeTransaction = ();//O+F. pallet_evm::EVMCurrencyAdapter<Balances, ()>;
 
 	/// Find author for the current block.
-	type FindAuthor = ();//FindAuthorAdapter<Aura>;
+	type FindAuthor = FindAuthorTruncated<Aura>;//Frontier; ();//Orndorff; 
 }
 
 impl pallet_ethereum::Config for Runtime {
